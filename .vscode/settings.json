@@ -4,7 +4,7 @@
   // ==== python ==============================================================
   // env
   "python.venvPath": ".venv",
-  "python.pythonPath": ".venv/bin/python3",
+  "python.pythonPath": "/usr/local/bin/python3.7",
   // linter
   "python.linting.pylintEnabled": true,
   "python.linting.lintOnSave": true,
