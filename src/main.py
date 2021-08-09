@@ -11,11 +11,20 @@ from pyquboSolver.tsp.costHamiltonian import TSPHamiltonian, makeHamiltonian
 # additional import
 from deprecated import deprecated
 import neal
+from dwave.system.samplers import DWaveSampler
+from dwave.system.composites import EmbeddingComposite
 
 
 def dict2AnsList(solutionsDict, citiesSize):
-    ansDicts = [solutionsDict["x"][i] for i in range(citiesSize - 1)]
-    orderList = [key for i in range(citiesSize - 1) for key, value in ansDicts[i].items() if value == 1]
+
+    orderList = []
+    for i in range(citiesSize - 1):
+        for j in range(citiesSize - 1):
+            if solutionsDict["x[" + str(i) + "][" + str(j) + "]"] == 1:
+                orderList.append(j)
+
+    print("ORDER LIST:")
+    print(orderList)
 
     if len(orderList) != (citiesSize - 1):
         print(
@@ -39,55 +48,36 @@ def dict2AnsList(solutionsDict, citiesSize):
     return orderList
 
 
-"""
 if __name__ == "__main__":
     cities = 5
 
     citiesLocation, paths = makeDemoData(citiesSize=cities)
+    print("==== cities location ==================================")
+    print(citiesLocation)
 
-    hamiltonian = TSPHamiltonian(citiesSize=cities, pathsWeight=paths)
-    feedDict = {"lamTime": 250.0, "lamVisit": 250.0}
+    print("\n==== paths array ==================================")
+    print(paths)
 
-    qubo, offset = hamiltonian.compile().to_qubo(feed_dict=feedDict)
-    rawSolution = pyqubo.solve_qubo(qubo)
-    decodeSolution, broken, energy = hamiltonian.compile().decode_solution(
-        rawSolution, vartype="BINARY", feed_dict=feedDict
-    )
+    # hamiltonian = TSPHamiltonian(citiesSize=cities, pathsWeight=paths)
+    feedDict = {"lamTime": 250.0, "lamVisit": 250.0}  # {"lamTime": 250.0, "lamVisit": 250.0}
 
-    orderList = dict2AnsList(solutionsDict=decodeSolution, citiesSize=cities)
+    # model = hamiltonian.compile()
+    model = makeHamiltonian(citiesSize=cities, pathsWeight=paths)
+    qubo, _ = model.to_qubo(feed_dict=feedDict)
+
+    sampler = EmbeddingComposite(DWaveSampler())
+    sampleSet = sampler.sample_qubo(qubo, num_reads=5)
+
+    print("RAW SAMPLE SET\n", sampleSet)
+
+    Solution = sampleSet.first.sample
+    print("\nSolution:")
+    print(Solution)
+
+    orderList = dict2AnsList(solutionsDict=Solution, citiesSize=cities)
     orderList = list(map(lambda x: x + 1, orderList))
     orderList.append(0)
 
     plotMap(citiesLocation=citiesLocation, orderList=orderList)
-
-    sys.exit()
-"""
-
-if __name__ == "__main__":
-    cities = 5
-
-    citiesLocation, paths = makeDemoData(citiesSize=cities)
-
-    hamiltonian = TSPHamiltonian(citiesSize=cities, pathsWeight=paths)
-
-    feedDict = {"lamTime": 250.0, "lamVisit": 250.0}
-
-    qubo, offset = hamiltonian.compile().to_qubo(feed_dict=feedDict)
-    rawSolution = pyqubo.solve_qubo(qubo)
-
-    print("RAW SAMPLE\n", rawSolution)
-    decodeSolution = hamiltonian.compile().decode_sample(rawSolution, vartype="BINARY", feed_dict=feedDict)
-
-    print("Decoded Sample\n")
-    print(decodeSolution.sample)
-
-    ## Some problems with dict2AnsList function
-    ## Try defining a custom dict2Ans function and uncomment the lines below
-
-    # orderList = dict2AnsList(solutionsDict=decodeSolution.sample, citiesSize=cities)
-    # orderList = list(map(lambda x: x + 1, orderList))
-    # orderList.append(0)
-
-    # plotMap(citiesLocation=citiesLocation, orderList=orderList)
 
     sys.exit()
